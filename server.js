@@ -36,7 +36,7 @@ app.post("/deploy", (req, res) => {
   const firstThreeChars = name.substring(0, 3).toUpperCase();
 
   // Update dfx.json with the new canister
-  const dfxJsonPath = path.join(__dirname, "./favourse-icp-backend/dfx.json"); // Update this path as needed
+  const dfxJsonPath = path.join(__dirname, "./favourse-icp-canister/dfx.json"); // Update this path as needed
   fs.readFile(dfxJsonPath, "utf8", (err, data) => {
     if (err) {
       return res.status(500).send("Error reading dfx.json");
@@ -100,7 +100,7 @@ app.post("/deploy", (req, res) => {
 
         exec(
           deployCommand,
-          { cwd: "./favourse-icp-backend", maxBuffer: 1024 * 500 },
+          { cwd: "./favourse-icp-canister", maxBuffer: 1024 * 500 },
           (deployError, deployStdout, deployStderr) => {
             if (deployError) {
               console.error(`exec error: ${deployError}`);
@@ -128,7 +128,7 @@ app.post("/deploy", (req, res) => {
               // If we did not find the URL, we assume the canister ID needs to be retrieved separately
               exec(
                 getCanisterIdCommand,
-                { cwd: "./favourse-icp-backend" },
+                { cwd: "./favourse-icp-canister" },
                 (idError, idStdout, idStderr) => {
                   if (idError) {
                     console.error(`exec error: ${idError}`);
@@ -202,7 +202,7 @@ app.post("/mint-nft", (req, res) => {
   // Execute the mint command
   exec(
     mintCommand,
-    { cwd: "../favourse-icp-backend", maxBuffer: 1024 * 500 },
+    { cwd: "../favourse-icp-canister", maxBuffer: 1024 * 500 },
     (error, stdout, stderr) => {
       if (error) {
         console.error(`Error minting NFT: ${error}`);
