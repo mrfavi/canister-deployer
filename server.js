@@ -16,7 +16,6 @@ app.post("/deploy", (req, res) => {
     logoType,
     logoData,
     name,
-    symbol,
     maxLimit,
     startDateTime,
     endDateTime,
@@ -37,7 +36,7 @@ app.post("/deploy", (req, res) => {
   const firstThreeChars = name.substring(0, 3).toUpperCase();
 
   // Update dfx.json with the new canister
-  const dfxJsonPath = path.join(__dirname, "../favourse-icp-backend/dfx.json"); // Update this path as needed
+  const dfxJsonPath = path.join(__dirname, "./favourse-icp-backend/dfx.json"); // Update this path as needed
   fs.readFile(dfxJsonPath, "utf8", (err, data) => {
     if (err) {
       return res.status(500).send("Error reading dfx.json");
@@ -101,7 +100,7 @@ app.post("/deploy", (req, res) => {
 
         exec(
           deployCommand,
-          { cwd: "../favourse-icp-backend", maxBuffer: 1024 * 500 },
+          { cwd: "./favourse-icp-backend", maxBuffer: 1024 * 500 },
           (deployError, deployStdout, deployStderr) => {
             if (deployError) {
               console.error(`exec error: ${deployError}`);
@@ -129,7 +128,7 @@ app.post("/deploy", (req, res) => {
               // If we did not find the URL, we assume the canister ID needs to be retrieved separately
               exec(
                 getCanisterIdCommand,
-                { cwd: "../favourse-icp-backend" },
+                { cwd: "./favourse-icp-backend" },
                 (idError, idStdout, idStderr) => {
                   if (idError) {
                     console.error(`exec error: ${idError}`);
@@ -159,6 +158,61 @@ app.post("/deploy", (req, res) => {
       }
     );
   });
+});
+
+app.post("/mint-nft", (req, res) => {
+  // Extract data from the request body
+  const {
+    principalId,
+    canisterName,
+    canisterId,
+    name,
+    location,
+    startDateTime,
+    endDateData,
+    logoData,
+  } = req.body;
+
+  const keyValData = [
+    { key: "name", val: `TextContent=\\"${name}\\"` },
+    { key: "canisterId", val: `TextContent=\\"${canisterId}\\"` },
+    { key: "location", val: `TextContent=\\"${location}\\"` },
+    { key: "startDateTime", val: `TextContent=\\"${startDateTime}\\"` },
+    { key: "endDateData", val: `TextContent=\\"${endDateData}\\"` },
+    { key: "logoData", val: `TextContent=\\"${logoData}\\"` },
+  ];
+
+  // Serialize keyValData to the expected string format for the DFX command
+  const serializedKeyValData = keyValData
+    .map(
+      ({ key, val }) => `record { key = \\"${key}\\"; val = variant{${val}}; }`
+    )
+    .join("; ");
+
+  // Append " NFT Ticket" to the name and convert to hex blob for the data field
+  const eventData = `${name} NFT Ticket`;
+  // const eventDataHex = Buffer.from(eventData).toString("hex");
+
+  // Construct the argument for the mint command using the serialized key_val_data
+  const mintArgument = `"(principal\\"${principalId}\\", vec { record { purpose = variant{Rendered}; data = blob\\"${eventData}\\"; key_val_data = vec { ${serializedKeyValData} }; } })"`;
+
+  // Construct the full mint command
+  const mintCommand = `dfx canister call ${canisterName} mintDip721\\ ${mintArgument}`;
+
+  // Execute the mint command
+  exec(
+    mintCommand,
+    { cwd: "../favourse-icp-backend", maxBuffer: 1024 * 500 },
+    (error, stdout, stderr) => {
+      if (error) {
+        console.error(`Error minting NFT: ${error}`);
+        return res.status(500).send(`Error minting NFT: ${stderr}`);
+      }
+      // Process and send the successful response
+      console.log(`NFT minted: ${stdout}`);
+      res.status(200).send(`NFT minted successfully: ${stdout}`);
+    }
+  );
 });
 
 const PORT = process.env.PORT || 3040;
